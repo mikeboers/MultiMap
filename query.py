@@ -161,8 +161,6 @@ Easy signatures!
 
 """
 
-import urllib
-import urlparse
 import collections
 from transcode import *
 
