@@ -122,6 +122,28 @@ Empty queries are empty:
     <uri.Query:[]>
     >>> print query
     <BLANKLINE>
+
+Parse and unparses properly
+    
+    >>> parse('key=value')
+    [('key', 'value')]
+    >>> parse('key=')
+    [('key', '')]
+    >>> parse('key')
+    [('key', None)]
+    
+    >>> query = Query('key')
+    >>> query['a'] = None
+    >>> query
+    <uri.Query:[('key', None), ('a', None)]>
+    >>> str(query)
+    'key&a'
+    
+    >>> query = Query('key=value/with/slashes.and.dots=and=equals')
+    >>> query
+    <uri.Query:[('key', 'value/with/slashes.and.dots=and=equals')]>
+    >>> str(query)
+    'key=value/with/slashes.and.dots=and=equals'
     
 Easy signatures!
 
@@ -142,20 +164,41 @@ Easy signatures!
 import urllib
 import urlparse
 import collections
+from transcode import *
+
+def parse(query):
+    ret = []
+    if not query:
+        return ret
+    for pair in query.split('&'):
+        pair = [decode(x) for x in pair.split('=', 1)]
+        if len(pair) == 1:
+            pair.append(None)
+        ret.append(tuple(pair))
+    return ret
+
+def unparse(pairs):
+    ret = []
+    for pair in pairs:
+        if pair[1] is None:
+            ret.append(encode(pair[0], '/'))
+        else:
+            ret.append(encode(pair[0], '/') + '=' + encode(pair[1], '/='))
+    return '&'.join(ret)
 
 class Query(object):
     
     def __init__(self, input=None):
         self._pairs = []
         if isinstance(input, basestring):
-            self._pairs = urlparse.parse_qsl(input, keep_blank_values=True)
+            self._pairs = parse(input)
         elif isinstance(input, collections.Mapping):
             self.update(input)
         elif input is not None:
             self.extend(input)
     
     def __str__(self):
-        return urllib.urlencode(self._pairs, doseq=True)
+        return unparse(self._pairs)
     
     def __repr__(self):
         return '<uri.Query:%r>' % self._pairs
@@ -211,13 +254,13 @@ class Query(object):
             self.setlist(key, value)
         else:
             del self[key]
-            self._pairs.append((key, str(value)))
+            self._pairs.append((key, self._conform_value(value)))
     
     def setlist(self, key, value):
         key = str(key)
         del self[key]
         for v in value:
-            self._pairs.append((key, str(v)))
+            self._pairs.append((key, self._conform_value(v)))
     
     def sort(self, *args, **kwargs):
         self._pairs.sort(*args, **kwargs)
@@ -226,7 +269,12 @@ class Query(object):
         pair = tuple(pair)
         if len(pair) != 2:
             raise ValueError('Pair must be length 2.')
-        return tuple(str(x) for x in pair)
+        return (str(pair[0]), self._conform_value(pair[1]))
+    
+    def _conform_value(self, value):
+        if value is None:
+            return None
+        return str(value)
             
     def append(self, pair):
         self._pairs.append(self._conform_pair(pair))
