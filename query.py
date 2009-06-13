@@ -115,6 +115,13 @@ Empty queries test as false:
     False
     >>> bool(Query('a=b'))
     True
+
+Empty queries are empty:
+    >>> query = Query('')
+    >>> query
+    <uri.Query:[]>
+    >>> print query
+    <BLANKLINE>
     
 Easy signatures!
 
