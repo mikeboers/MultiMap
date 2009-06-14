@@ -239,6 +239,9 @@ class Query(object):
     def values(self):
         return list(self.itervalues())
     
+    def iterallitems(self):
+        return iter(self._pairs)
+    
     def allitems(self):
         return self._pairs[:]
     
