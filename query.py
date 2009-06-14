@@ -1,12 +1,9 @@
-"""On the inside, it will be a list of key/value pairs. This will maintain all of the orders. If we just kept the order of the keys, then the following two queries would be identical:
+"""Module for a URI query parser.
 
-	a=1&b=2&a=3
-	a=1&a=3&b=2
-
-It may seem kinda slow, but the list should be small enough in practise.
-
-The query object should have dictionary like access, defaulting to returning the first of
-any duplicate pairs. A query.list(key) method to return a list by key. allitems and alliteritems will return ALL key value pairs. (The allitems list will be a copy.)
+It has dictionary like access. While this class will accept more than one
+value per key (a key can be repeated) the dictionary methods will tend to
+return only the first of those values. Care has been taken, however, to always
+maintain the order of the multiple values.
 
 Instantiate with a string:
 
@@ -293,6 +290,6 @@ class Query(object):
 
 if __name__ == '__main__':
     import doctest
-    print 'Testing...'
+    print 'Testing', __file__
     doctest.testmod()
     print 'Done.'
