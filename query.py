@@ -5,6 +5,11 @@ value per key (a key can be repeated) the dictionary methods will tend to
 return only the first of those values. Care has been taken, however, to always
 maintain the order of the multiple values.
 
+NOTE that I do NOT treat '+' as a space! It will stay a '+'. Spaces MUST be
+percent encoded to be picked up.
+
+TODO: make sure that is what jquery does.
+
 Instantiate with a string:
 
     >>> query = Query('key1=value1&key2=value2')
