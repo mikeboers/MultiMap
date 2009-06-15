@@ -14,23 +14,23 @@ Instantiate with a string:
 
     >>> query = Query('key1=value1&key2=value2')
     >>> query.items()
-    [(u'key1', u'value1'), (u'key2', u'value2')]
+    [('key1', 'value1'), ('key2', 'value2')]
 
 Instantiate with a dict:
 
     >>> query = Query({'a': 1, 'b': 2})
     >>> sorted(query.allitems())
-    [(u'a', u'1'), (u'b', u'2')]
+    [('a', '1'), ('b', '2')]
 
 Instantiate with a list of pairs:
 
-    >>> query = Query([(u'one', u'1'), (u'two', u'2')])
+    >>> query = Query([('one', '1'), ('two', '2')])
     >>> query.allitems()
-    [(u'one', u'1'), (u'two', u'2')]
+    [('one', '1'), ('two', '2')]
 
 Cast back to a string:
-    >>> unicode(query)
-    u'one=1&two=2'
+    >>> str(query)
+    'one=1&two=2'
 
 It can deal with multiple values per key (although by all the normal dict methods it does not appear this way).:
 
@@ -163,10 +163,6 @@ Easy signatures!
 
 """
 
-from __future__ import unicode_literals
-
-
-
 
 import collections
 from transcode import *
@@ -277,12 +273,12 @@ class Query(object):
         pair = tuple(pair)
         if len(pair) != 2:
             raise ValueError('Pair must be length 2.')
-        return (unicode(pair[0]), self._conform_value(pair[1]))
+        return (str(pair[0]), self._conform_value(pair[1]))
     
     def _conform_value(self, value):
         if value is None:
             return None
-        return unicode(value)
+        return str(value)
             
     def append(self, pair):
         self._pairs.append(self._conform_pair(pair))
