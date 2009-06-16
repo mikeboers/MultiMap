@@ -176,11 +176,6 @@ Easy signatures!
 
 """
 
-def unicoder(obj, encoding='UTF-8', errors='replace'):
-    if isinstance(obj, unicode):
-        return obj
-    return unicode(str(obj), encoding, errors)
-
 import collections
 from transcode import *
 
