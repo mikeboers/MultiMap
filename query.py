@@ -1,4 +1,5 @@
-"""Module for a URI query parser.
+# coding: UTF-8
+u"""Module for a URI query parser.
 
 It has dictionary like access. While this class will accept more than one
 value per key (a key can be repeated) the dictionary methods will tend to
@@ -14,19 +15,19 @@ Instantiate with a string:
 
     >>> query = Query('key1=value1&key2=value2')
     >>> query.items()
-    [('key1', 'value1'), ('key2', 'value2')]
+    [(u'key1', u'value1'), (u'key2', u'value2')]
 
 Instantiate with a dict:
 
-    >>> query = Query({'a': 1, 'b': 2})
+    >>> query = Query({u'a': 1, u'b': 2})
     >>> sorted(query.allitems())
-    [('a', '1'), ('b', '2')]
+    [(u'a', u'1'), (u'b', u'2')]
 
 Instantiate with a list of pairs:
 
-    >>> query = Query([('one', '1'), ('two', '2')])
+    >>> query = Query([('one', u'1'), ('two', u'2')])
     >>> query.allitems()
-    [('one', '1'), ('two', '2')]
+    [(u'one', u'1'), (u'two', u'2')]
 
 Cast back to a string:
     >>> str(query)
@@ -36,34 +37,34 @@ It can deal with multiple values per key (although by all the normal dict method
 
     >>> query = Query('key=value1&key=value2')
     >>> query['key']
-    'value1'
+    u'value1'
 
     >>> query.list('key')
-    ['value1', 'value2']
+    [u'value1', u'value2']
 
     >>> query.allitems()
-    [('key', 'value1'), ('key', 'value2')]
+    [(u'key', u'value1'), (u'key', u'value2')]
 
 Order is maintained very precisely, even with multiple values per key:
 
     >>> query = Query('a=1&b=2&a=3')
     >>> query.allitems()
-    [('a', '1'), ('b', '2'), ('a', '3')]
+    [(u'a', u'1'), (u'b', u'2'), (u'a', u'3')]
 
 Setting is a little more difficult. Assume that unless something that extends a tuple or list (ie passes isinstance(input, (tuple, list))) it is supposed to be the ONLY string value for that key.
 
     >>> # Notice that we are still using the query with multiple values for a.
-    >>> query.list('a')
-    ['1', '3']
-    >>> query['a'] = 'value'
-    >>> query.list('a')
-    ['value']
+    >>> query.list(u'a')
+    [u'1', u'3']
+    >>> query[u'a'] = 'value'
+    >>> query.list(u'a')
+    [u'value']
 
 Setting a list:
 
     >>> query['key'] = 'a b c'.split()
     >>> query.list('key')
-    ['a', 'b', 'c']
+    [u'a', u'b', u'c']
 
 You can provide a sequence that is not a tuple or list by using the setlist method. This will remove all existing pairs by key, and append the new ones on the end of the query.
 
@@ -72,45 +73,45 @@ You can provide a sequence that is not a tuple or list by using the setlist meth
     ... 		yield x
     >>> query.setlist('key', g())
     >>> query.list('key')
-    ['1', '2', '3']
+    [u'1', u'2', u'3']
 
 The query can be sorted via list.sort (notice that the key function is passed a key/value tuple):
 
     >>> query = Query('a=1&c=2&b=3')
     >>> query.sort()
     >>> query.allitems()
-    [('a', '1'), ('b', '3'), ('c', '2')]
+    [(u'a', u'1'), (u'b', u'3'), (u'c', u'2')]
     >>> query.sort(key=lambda x: -ord(x[0]))
     >>> query.allitems()
-    [('c', '2'), ('b', '3'), ('a', '1')]
+    [(u'c', u'2'), (u'b', u'3'), (u'a', u'1')]
 
 Pairs can be appended with list.append and list.insert and list.extend. (We will just cast the values to tuples and assert they have length 2.)
 
     >>> query = Query()
-    >>> query.append(('a', '1'))
+    >>> query.append((u'a', u'1'))
     >>> query.allitems()
-    [('a', '1')]
+    [(u'a', u'1')]
 
-    >>> query.extend(sorted({'b': 2, 'c': 3}.items()))
+    >>> query.extend(sorted({u'b': 2, u'c': 3}.items()))
     >>> query.allitems()
-    [('a', '1'), ('b', '2'), ('c', '3')]
+    [(u'a', u'1'), (u'b', u'2'), (u'c', u'3')]
 
     >>> query.insert(0, ('z', '-1'))
     >>> query.allitems()
-    [('z', '-1'), ('a', '1'), ('b', '2'), ('c', '3')]
+    [(u'z', u'-1'), (u'a', u'1'), (u'b', u'2'), (u'c', u'3')]
 
 You can update the query via dict.update:
 
     >>> query = Query()
-    >>> query.update({'a': 1, 'b': [2, 3], 'c': '4'})
+    >>> query.update({u'a': 1, u'b': [2, 3], u'c': u'4'})
     >>> query.sort() # Because the dictionary does not come in order.
     >>> query.allitems()
-    [('a', '1'), ('b', '2'), ('b', '3'), ('c', '4')]
+    [(u'a', u'1'), (u'b', u'2'), (u'b', u'3'), (u'c', u'4')]
 
-    >>> query.update({'b': '2/3'})
+    >>> query.update({u'b': '2/3'})
     >>> query.sort() # Dicts are not ordered!
     >>> query.allitems()
-    [('a', '1'), ('b', '2/3'), ('c', '4')]
+    [(u'a', u'1'), (u'b', u'2/3'), (u'c', u'4')]
 
 Empty queries test as false:
     >>> bool(Query())
@@ -128,33 +129,45 @@ Empty queries are empty:
 Parse and unparses properly
     
     >>> parse('key=value')
-    [('key', 'value')]
+    [(u'key', u'value')]
     >>> parse('key=')
-    [('key', '')]
+    [(u'key', u'')]
     >>> parse('key')
-    [('key', None)]
+    [(u'key', None)]
     
     >>> query = Query('key')
     >>> query['a'] = None
     >>> query
-    <uri.Query:[('key', None), ('a', None)]>
+    <uri.Query:[(u'key', None), (u'a', None)]>
     >>> str(query)
     'key&a'
     
     >>> query = Query('key=value/with/slashes.and.dots=and=equals')
     >>> query
-    <uri.Query:[('key', 'value/with/slashes.and.dots=and=equals')]>
+    <uri.Query:[(u'key', u'value/with/slashes.and.dots=and=equals')]>
     >>> str(query)
     'key=value/with/slashes.and.dots=and=equals'
+
+Unicode does work properly.
+    >>> query = Query('k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%C2%B6%E2%80%A2%C2%AA%C2%BA')
+    >>> print query.keys()[0]
+    kéy
+    >>> print query[u'kéy']
+    ¡™£¢∞§¶•ªº
+    
+    >>> query = Query()
+    >>> query[u'kéy'] = u'¡™£¢∞§¶•ªº'
+    >>> print query
+    k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%C2%B6%E2%80%A2%C2%AA%C2%BA
     
 Easy signatures!
 
 # >>> query = Query('v=value')
-# >>> # query.add_nonce('n', length=8)
-# >>> query['n'] = '12345'
-# >>> query.sign_with_md5(hmac_key='this is the key', sig_key='s')
+# >>> # query.add_nonce(u'n', length=8)
+# >>> query[u'n'] = '12345'
+# >>> query.sign_with_md5(hmac_key='this is the key', sig_key=u's')
 # >>> str(query)
-# [('v', 'value'), ('n', '12345'), ('s', 'md5signgoesinhere')]
+# [(u'v', 'value'), (u'n', '12345'), (u's', 'md5signgoesinhere')]
 # 
 # >>> query.sign('this is the key')
 # True
@@ -163,6 +176,10 @@ Easy signatures!
 
 """
 
+def unicoder(obj, encoding='UTF-8', errors='replace'):
+    if isinstance(obj, unicode):
+        return obj
+    return unicode(str(obj), encoding, errors)
 
 import collections
 from transcode import *
@@ -171,8 +188,10 @@ def parse(query):
     ret = []
     if not query:
         return ret
-    for pair in query.split('&'):
-        pair = [decode(x) for x in pair.split('=', 1)]
+    for pair in query.split(u'&'):
+        pair = [decode(x) for x in pair.split(u'=', 1)]
+        if isinstance(pair[0], str):
+            pair = [unicoder(x) for x in pair]
         if len(pair) == 1:
             pair.append(None)
         ret.append(tuple(pair))
@@ -182,10 +201,10 @@ def unparse(pairs):
     ret = []
     for pair in pairs:
         if pair[1] is None:
-            ret.append(encode(pair[0], '/'))
+            ret.append(encode(pair[0], u'/'))
         else:
-            ret.append(encode(pair[0], '/') + '=' + encode(pair[1], '/='))
-    return '&'.join(ret)
+            ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/='))
+    return u'&'.join(ret)
 
 class Query(object):
     
@@ -208,13 +227,13 @@ class Query(object):
         return len(self._pairs)
     
     def __getitem__(self, key):
-        key = str(key)
+        key = unicoder(key)
         for x in self._pairs:
             if x[0] == key:
                 return x[1]
     
     def list(self, key):
-        key = str(key)
+        key = unicoder(key)
         return [x[1] for x in self._pairs if x[0] == key]
     
     def iteritems(self):
@@ -249,19 +268,19 @@ class Query(object):
         return self._pairs[:]
     
     def __delitem__(self, key):
-        key = str(key)
+        key = unicoder(key)
         self._pairs = [x for x in self._pairs if x[0] != key]
     
     def __setitem__(self, key, value):
-        key = str(key)
+        key = unicoder(key)
         if isinstance(value, (tuple, list)):
             self.setlist(key, value)
         else:
             del self[key]
-            self._pairs.append((key, self._conform_value(value)))
+            self._pairs.append((unicoder(key), self._conform_value(value)))
     
     def setlist(self, key, value):
-        key = str(key)
+        key = unicoder(key)
         del self[key]
         for v in value:
             self._pairs.append((key, self._conform_value(v)))
@@ -273,12 +292,12 @@ class Query(object):
         pair = tuple(pair)
         if len(pair) != 2:
             raise ValueError('Pair must be length 2.')
-        return (str(pair[0]), self._conform_value(pair[1]))
+        return (unicoder(pair[0]), self._conform_value(pair[1]))
     
     def _conform_value(self, value):
         if value is None:
             return None
-        return str(value)
+        return unicoder(value)
             
     def append(self, pair):
         self._pairs.append(self._conform_pair(pair))
