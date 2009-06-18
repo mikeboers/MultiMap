@@ -6,8 +6,8 @@ value per key (a key can be repeated) the dictionary methods will tend to
 return only the first of those values. Care has been taken, however, to always
 maintain the order of the multiple values.
 
-NOTE that I do NOT treat '+' as a space! It will stay a '+'. Spaces MUST be
-percent encoded to be picked up.
+I need to decode + as a space, because that is what firefox does to me. I
+won't, however, re-encode it as a space. It feels wrong to me.
 
 TODO: make sure that is what jquery does.
 
@@ -159,6 +159,13 @@ Unicode does work properly.
     >>> query[u'kéy'] = u'¡™£¢∞§¶•ªº'
     >>> print query
     k%C3%A9y=%C2%A1%E2%84%A2%C2%A3%C2%A2%E2%88%9E%C2%A7%C2%B6%E2%80%A2%C2%AA%C2%BA
+
+Spaces as pluses:
+    >>> query = Query('key+with+spaces=value+with+spaces')
+    >>> query
+    <uri.Query:[(u'key with spaces', u'value with spaces')]>
+    >>> str(query)
+    'key%20with%20spaces=value%20with%20spaces'
     
 Easy signatures!
 
@@ -184,7 +191,7 @@ def parse(query):
     if not query:
         return ret
     for pair in query.split(u'&'):
-        pair = [decode(x) for x in pair.split(u'=', 1)]
+        pair = [decode(x.replace('+', ' ')) for x in pair.split(u'=', 1)]
         if isinstance(pair[0], str):
             pair = [unicoder(x) for x in pair]
         if len(pair) == 1:
