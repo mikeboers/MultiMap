@@ -315,8 +315,10 @@ class Query(object):
             del self[k]
             self[k] = v
 
+
 if __name__ == '__main__':
-    import doctest
-    print 'Testing', __file__
-    doctest.testmod()
-    print 'Done.'
+    try:
+        from ..test import run
+    except:
+        import sys
+        sys.
