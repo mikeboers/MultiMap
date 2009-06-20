@@ -317,8 +317,7 @@ class Query(object):
 
 
 if __name__ == '__main__':
-    try:
-        from ..test import run
-    except:
-        import sys
-        sys.
+    import sys
+    sys.path.insert(0, '..')
+    import test
+    test.run()
