@@ -319,5 +319,5 @@ class Query(object):
 if __name__ == '__main__':
     import sys
     sys.path.insert(0, '..')
-    import test
-    test.run()
+    from test import run
+    run()
