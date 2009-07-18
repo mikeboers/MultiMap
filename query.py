@@ -169,21 +169,35 @@ Spaces as pluses:
     
 Easy signatures!
 
-# >>> query = Query('v=value')
-# >>> # query.add_nonce(u'n', length=8)
-# >>> query[u'n'] = '12345'
-# >>> query.sign_with_md5(hmac_key='this is the key', sig_key=u's')
-# >>> str(query)
-# [(u'v', 'value'), (u'n', '12345'), (u's', 'md5signgoesinhere')]
-# 
-# >>> query.sign('this is the key')
-# True
-# >>> query.verify_signature('this is not the key')
-# False
+    >>> query = Query('v=value')
+    >>> query[u'n'] = '12345'
+    >>> query.sign('this is the key', add_nonce=False, add_time=False)
+    >>> str(query)
+    'v=value&n=12345&s=22feaf6a6700d2c3ccf22731eaebf5c3'
+    
+    >>> query.verify('this is the key')
+    True
+    >>> query.verify('this is not the key')
+    False
+    
+    >>> query = Query('v=somevalue')
+    >>> query.sign('another_key')
+    >>> str(query) # doctest:+ELLIPSIS
+    'v=somevalue&t=...&n=...&s=...'
+    >>> query.verify('another_key')
+    True
+    >>> query.verify('bad key')
+    False
+
 
 """
 
 import collections
+import time
+import os
+import hashlib
+import hmac
+
 from transcode import *
 
 def parse(query):
@@ -314,7 +328,56 @@ class Query(object):
         for k, v in mapping.iteritems():
             del self[k]
             self[k] = v
-
+    
+    def copy(self):
+        return Query(self._pairs[:])
+    
+    def sign(self, key, hasher=None, maxage=None, add_time=True, add_nonce=True, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
+        if add_time:
+            self[time_key] = str(int(time.time()))
+        if maxage is not None:
+            self[expiry_key] = str(int(time.time() + maxage))
+        if add_nonce:
+            self[nonce_key] = hashlib.md5(os.urandom(1024)).hexdigest()[:8]
+        copy = self.copy()
+        del copy[sig_key]
+        copy.sort()
+        self[sig_key] = hmac.new(key, str(copy), hasher or hashlib.md5).hexdigest()
+    
+    def verify(self, key, hasher=None, maxage=None, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
+        # Make sure there is a sig.
+        if sig_key not in self:
+            return False
+        
+        # Make sure it is good.
+        copy = self.copy()
+        del copy[sig_key]
+        copy.sort()
+        if self[sig_key] != hmac.new(key, str(copy), hasher or hashlib.md5).hexdigest():
+            # print 'bad sig'
+            return False
+        
+        # Make sure the built in expiry time is okay.
+        if expiry_key in self:
+            try:
+                if int(self[expiry_key]) < time.time():
+                    # print 'bad expiry'
+                    return False
+            except:
+                # print 'bad expiry'
+                return False
+        
+        # Make sure it isnt too old.
+        if maxage is not None and time_key in self:
+            try:
+                if int(self[time_key]) + maxage < time.time():
+                    # print 'bad age'
+                    return False
+            except:
+                # print 'bad age'
+                return False
+        return True
+        
 
 if __name__ == '__main__':
     import sys
