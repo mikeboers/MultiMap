@@ -332,8 +332,8 @@ class Query(object):
     def copy(self):
         return Query(self._pairs[:])
     
-    def sign(self, key, hasher=None, maxage=None, add_time=True, add_nonce=True, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
-        if add_time:
+    def sign(self, key, hasher=None, maxage=None, add_time=None, add_nonce=True, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
+        if add_time or (add_time is None and maxage is None):
             self[time_key] = str(int(time.time()))
         if maxage is not None:
             self[expiry_key] = str(int(time.time() + maxage))
