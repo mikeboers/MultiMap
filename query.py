@@ -222,7 +222,7 @@ def unparse(pairs):
             ret.append(encode(pair[0], u'/') + u'=' + encode(pair[1], '/='))
     return u'&'.join(ret)
 
-class Query(object):
+class Query(collections.Mapping):
     
     def __init__(self, input=None):
         self._pairs = []
@@ -247,6 +247,9 @@ class Query(object):
         for x in self._pairs:
             if x[0] == key:
                 return x[1]
+    
+    def __len__(self):
+        return len(list(self))
     
     def list(self, key):
         key = unicoder(key)
