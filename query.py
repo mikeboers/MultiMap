@@ -247,9 +247,10 @@ class Query(collections.Mapping):
         for x in self._pairs:
             if x[0] == key:
                 return x[1]
+        raise KeyError(key)
     
     def __len__(self):
-        return len(list(self))
+        return len(set(x[0] for x in self._pairs))
     
     def list(self, key):
         key = unicoder(key)
@@ -345,6 +346,7 @@ class Query(collections.Mapping):
         copy = self.copy()
         del copy[sig_key]
         copy.sort()
+        #print repr(str(copy))
         self[sig_key] = hmac.new(key, str(copy), hasher or hashlib.md5).hexdigest()
     
     def verify(self, key, hasher=None, maxage=None, time_key = 't', sig_key='s', nonce_key='n', expiry_key='x'):
@@ -356,28 +358,29 @@ class Query(collections.Mapping):
         copy = self.copy()
         del copy[sig_key]
         copy.sort()
+        #print repr(str(copy))
         if self[sig_key] != hmac.new(key, str(copy), hasher or hashlib.md5).hexdigest():
-            # print 'bad sig'
+            #print 'bad sig'
             return False
         
         # Make sure the built in expiry time is okay.
         if expiry_key in self:
             try:
                 if int(self[expiry_key]) < time.time():
-                    # print 'bad expiry'
+                    #print 'bad expiry'
                     return False
             except:
-                # print 'bad expiry'
+                #print 'bad expiry'
                 return False
         
         # Make sure it isnt too old.
         if maxage is not None and time_key in self:
             try:
                 if int(self[time_key]) + maxage < time.time():
-                    # print 'bad age'
+                    #print 'bad age'
                     return False
             except:
-                # print 'bad age'
+                #print 'bad age'
                 return False
         return True
         
