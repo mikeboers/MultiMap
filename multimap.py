@@ -1,4 +1,18 @@
-from __future__ import absolute_import
+"""Module for various mapping which allow multiple values per key. As a by
+product of how they are controlled they also maintain order.
+
+The API of these objects tends towards being a drop-in replacement for normal
+mappings. All the dict methods will return only the first occourance of a key.
+Even len(map) will return the number of unique keys, not the number of pairs
+stored. Many dict methods have an "all" prefixed version which does the same
+thing but to all key-value pairs. Thusly, multiple of the same key may be
+returned while using them.
+
+Several list methods are also exposed, such as insert, extend, pop, etc.
+Primary testing can be found in the nitrogen.uri.query module.
+
+
+"""
 
 # Setup path for local evaluation.
 # When copying to another file, just change the __package__ to be accurate.
@@ -8,7 +22,6 @@ if __name__ == '__main__':
     sys.path.insert(0, __file__[:__file__.rfind('/' + __package__.split('.')[0])])
     __import__(__package__)
 
-# This is the system collections as we are using absolute imports
 import collections
 
 class MultiMap(collections.Mapping):
@@ -37,8 +50,8 @@ class MultiMap(collections.Mapping):
     >>> m.setlist('c', [1, 2, 3])
     >>> m['c']
     1
-    >>> m.all('c')
-    (1, 2, 3)
+    >>> m.getall('c')
+    [1, 2, 3]
     
     >>> m.keys()
     ['a', 'b', 'c']
@@ -46,10 +59,24 @@ class MultiMap(collections.Mapping):
     ['a', 'b', 'c', 'c', 'c']
     >>> m.allvalues()
     [1, 2, 1, 2, 3]
+    >>> len(m)
+    3
+    >>> m.alllen()
+    5
     
     >>> m['c'] = 4
-    >>> m.all('c')
-    (4,)
+    >>> m.getall('c')
+    [4]
+    
+    >>> m.append((1, 2))
+    >>> m.allitems()
+    [('a', 1), ('b', 2), ('c', 4), (1, 2)]
+    
+    >>> m.pop()
+    (1, 2)
+    
+    >>> m.pop(0)
+    ('a', 1)
     
     """
     
@@ -87,9 +114,9 @@ class MultiMap(collections.Mapping):
     def alllen(self):
         return len(self._pairs)
     
-    def all(self, key):
+    def getall(self, key):
         key = self._conform_key(key)
-        return tuple(x[1] for x in self._pairs if x[0] == key)
+        return [x[1] for x in self._pairs if x[0] == key]
     
     def iteritems(self):
         keys_yielded = set()
@@ -168,6 +195,9 @@ class MultiMap(collections.Mapping):
     
     def extend(self, pairs):
         self._pairs.extend(self._conform_pair(x) for x in pairs)
+    
+    def pop(self, *args):
+        return self._pairs.pop(*args)
     
     def insert(self, index, pair):
         self._pairs.insert(index, self._conform_pair(pair))
