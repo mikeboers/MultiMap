@@ -318,15 +318,15 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
 
 
 class DelayedTraits(object):
-    def __init__(self, callback):
-        self._callback= callback
+    def __init__(self, supplier=None):
+        self.supplier = supplier
         self._setup = False
         self.__pairs = None
 
     @property
     def _pairs(self):
         if not self._setup:
-            self.__pairs = list(self._callback())
+            self.__pairs = list(self.supplier())
             self._setup = True
         return self.__pairs
     
