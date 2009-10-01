@@ -14,6 +14,9 @@ Primary testing can be found in the nitrogen.uri.query module.
 Unfortunately the read-only versions arent very well protected. I guess they
 are only there as reminders to the honest programmer who makes mistakes.
 
+I have also stuck with the dict-like naming convention of all lowercase names
+with no word seperators. Oh well.
+
 """
 
 # Setup path for local evaluation.
@@ -211,12 +214,37 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     >>> m.allitems()
     [('a', 1), ('b', 2), ('c', 4), (1, 2)]
 
-    >>> m.pop()
+    >>> m.popitem()
     (1, 2)
 
-    >>> m.pop(0)
+    >>> m.popitem(0)
     ('a', 1)
-
+    
+    >>> M = MutableMultiMap([('a', 0), ('b', 1), ('c', 2), ('b', 3), ('c', 4), ('c', 5)])
+    
+    >>> m = M.copy()
+    >>> m.pop('b')
+    1
+    >>> m
+    MutableMultiMap([('a', 0), ('c', 2), ('c', 4), ('c', 5)])
+    
+    >>> m = M.copy()
+    >>> m.popone('b')
+    1
+    >>> m
+    MutableMultiMap([('a', 0), ('c', 2), ('b', 3), ('c', 4), ('c', 5)])
+    
+    >>> m.popall('c')
+    [2, 4, 5]
+    >>> m
+    MutableMultiMap([('a', 0), ('b', 3)])
+    
+    >>> m = M.copy()
+    >>> m.popitem()
+    ('c', 5)
+    >>> m.popitem(0)
+    ('a', 0)
+    
     """
     
     def __delitem__(self, key):
@@ -246,7 +274,35 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     def extend(self, pairs):
         self._pairs.extend(self._conform_pair(x) for x in pairs)
 
-    def pop(self, *args):
+    def pop(self, key, *args):
+        try:
+            ret = self[key]
+        except KeyError:
+            if args:
+                return args[0]
+            raise
+        del self[key]
+        return ret
+    
+    def popall(self, key):
+        ret = self.getall(key)
+        del self[key]
+        return ret
+    
+    def popone(self, key, *args):
+        try:
+            ret = self[key]
+        except KeyError:
+            if args:
+                return args[0]
+            raise
+        for i in range(len(self._pairs)):
+            if self._pairs[i][0] == key:
+                self._pairs.pop(i)
+                break
+        return ret
+    
+    def popitem(self, *args):
         return self._pairs.pop(*args)
 
     def insert(self, index, pair):
