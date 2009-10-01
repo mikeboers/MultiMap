@@ -11,6 +11,8 @@ returned while using them.
 Several list methods are also exposed, such as insert, extend, pop, etc.
 Primary testing can be found in the nitrogen.uri.query module.
 
+Unfortunately the read-only versions arent very well protected. I guess they
+are only there as reminders to the honest programmer who makes mistakes.
 
 """
 
@@ -69,16 +71,16 @@ class MultiMap(collections.Mapping):
     """
     
     def __init__(self, *args, **kwargs):
-        self.__pairs = []
+        self._pairs = []
         for arg in args:
             if isinstance(arg, collections.Mapping):
                 for x in arg.items():
-                    self.__pairs.append(self._conform_pair(x))
+                    self._pairs.append(self._conform_pair(x))
             else:
                 for x in arg:
-                    self.__pairs.append(self._conform_pair(x))
+                    self._pairs.append(self._conform_pair(x))
         for x in kwargs.items():
-            self.__pairs.append(self._conform_pair(x))
+            self._pairs.append(self._conform_pair(x))
     
     def _conform_key(self, key):
         return key
@@ -93,31 +95,31 @@ class MultiMap(collections.Mapping):
         return (self._conform_key(pair[0]), self._conform_value(pair[1]))
         
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self.__pairs)
+        return '%s(%r)' % (self.__class__.__name__, self._pairs)
     
     def __nonzero__(self):
-        return len(self.__pairs)
+        return len(self._pairs)
     
     def __getitem__(self, key):
         key = self._conform_key(key)
-        for x in self.__pairs:
+        for x in self._pairs:
             if x[0] == key:
                 return x[1]
         raise KeyError(key)
     
     def __len__(self):
-        return len(set(x[0] for x in self.__pairs))
+        return len(set(x[0] for x in self._pairs))
     
     def alllen(self):
-        return len(self.__pairs)
+        return len(self._pairs)
     
     def getall(self, key):
         key = self._conform_key(key)
-        return [x[1] for x in self.__pairs if x[0] == key]
+        return [x[1] for x in self._pairs if x[0] == key]
     
     def iteritems(self):
         keys_yielded = set()
-        for k, v in self.__pairs:
+        for k, v in self._pairs:
             if k not in keys_yielded:
                 keys_yielded.add(k)
                 yield k, v
@@ -132,11 +134,11 @@ class MultiMap(collections.Mapping):
         return iter(self)
     
     def iterallkeys(self):
-        for x in self.__pairs:
+        for x in self._pairs:
             yield x[0]
     
     def allkeys(self):
-        return [x[0] for x in self.__pairs]
+        return [x[0] for x in self._pairs]
     
     def items(self):
         return list(self.iteritems())
@@ -148,17 +150,17 @@ class MultiMap(collections.Mapping):
         return list(self.itervalues())
     
     def iterallvalues(self):
-        for x in self.__pairs:
+        for x in self._pairs:
             return x[1]
     
     def allvalues(self):
-        return [x[1] for x in self.__pairs]
+        return [x[1] for x in self._pairs]
     
     def iterallitems(self):
-        return iter(self.__pairs)
+        return iter(self._pairs)
     
     def allitems(self):
-        return self.__pairs[:]
+        return self._pairs[:]
 
 
 class MutableMultiMap(MultiMap, collections.MutableMapping):
@@ -217,15 +219,6 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
 
     """
     
-    @property
-    def _pairs(self):
-        # This is such a hack!
-        return self._MultiMap__pairs
-    
-    @_pairs.setter
-    def _pairs(self, value):
-        self._MultiMap__pairs = value
-    
     def __delitem__(self, key):
         key = self._conform_key(key)
         self._pairs = [x for x in self._pairs if x[0] != key]
@@ -266,7 +259,63 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
 
     def copy(self):
         return self.__class__(self._pairs[:])
+
+
+class DelayedTraits(object):
+    def __init__(self, callback):
+        self._callback= callback
+        self._setup = False
+        self.__pairs = None
+
+    @property
+    def _pairs(self):
+        if not self._setup:
+            self.__pairs = list(self._callback())
+            self._setup = True
+        return self.__pairs
     
+    @_pairs.setter
+    def _pairs(self, value):
+        self.__pairs = value
+
+class DelayedMultiMap(DelayedTraits, MultiMap):
+    """
+    >>> def gen():
+    ...     print 'generating'
+    ...     for x in range(5):
+    ...         yield (x, 'x')
+    >>> m = DelayedMultiMap(gen)
+    >>> m[0]
+    generating
+    'x'
+    >>> m[5] = 'new'
+    Traceback (most recent call last):
+    ...
+    TypeError: 'DelayedMultiMap' object does not support item assignment
+
+    """
+    
+    pass
+
+class DelayedMutableMultiMap(DelayedTraits, MutableMultiMap):
+    """
+    >>> def gen():
+    ...     print 'generating'
+    ...     for x in range(5):
+    ...         yield (x, 'x')
+    >>> m = DelayedMutableMultiMap(gen)
+    >>> m[0]
+    generating
+    'x'
+    >>> m[5] = 'new'
+    >>> m
+    DelayedMutableMultiMap([(0, 'x'), (1, 'x'), (2, 'x'), (3, 'x'), (4, 'x'), (5, 'new')])
+    
+    """
+    
+    pass
+    
+
 if __name__ == '__main__':
     from . import test
     test.run()
