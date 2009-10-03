@@ -94,7 +94,7 @@ class MultiMap(collections.Mapping):
     def _conform_pair(self, pair):
         pair = tuple(pair)
         if len(pair) != 2:
-            raise ValueError('pair must be length 2')
+            raise ValueError('MultiMap element must have length 2')
         return (self._conform_key(pair[0]), self._conform_value(pair[1]))
         
     def __repr__(self):
