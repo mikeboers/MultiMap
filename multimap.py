@@ -110,6 +110,10 @@ class MultiMap(collections.Mapping):
                 return x[1]
         raise KeyError(key)
     
+    def __contains__(self, key):
+        key = self._conform_key(key)
+        return any(x[0] == key for x in self._pairs)
+    
     def __len__(self):
         return len(set(x[0] for x in self._pairs))
     
@@ -371,6 +375,18 @@ class DelayedMutableMultiMap(DelayedTraits, MutableMultiMap):
     
     pass
     
+def test_conform_methods():
+    class CaseInsensitive(MutableMultiMap):
+        def _conform_key(self, key):
+            return key.lower()
+    d = CaseInsensitive()
+    d['a'] = 1
+    d['A'] = 2
+    assert len(d) == 1
+    assert d['a'] == 2
+    d['Content-Encoding'] = 'deflate'
+    assert 'content-encoding' in d
+    assert 'blah' not in d
 
 if __name__ == '__main__':
     from . import test
