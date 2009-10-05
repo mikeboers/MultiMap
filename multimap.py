@@ -279,6 +279,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         self._pairs.extend(self._conform_pair(x) for x in pairs)
 
     def pop(self, key, *args):
+        key = self._conform_key(key)
         try:
             ret = self[key]
         except KeyError:
@@ -289,11 +290,13 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         return ret
     
     def popall(self, key):
+        key = self._conform_key(key)
         ret = self.getall(key)
         del self[key]
         return ret
     
     def popone(self, key, *args):
+        key = self._conform_key(key)
         try:
             ret = self[key]
         except KeyError:
@@ -330,7 +333,8 @@ class DelayedTraits(object):
     @property
     def _pairs(self):
         if not self._setup:
-            self.__pairs = list(self.supplier())
+            self.__pairs = [(self._conform_key(k), self._conform_value(v)) for
+                k, v in self.supplier()]
             self._setup = True
         return self.__pairs
     
