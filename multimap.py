@@ -254,16 +254,22 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     
     """
     
-    def __delitem__(self, key):
+    def remove(self, key):
         key = self._conform_key(key)
         self._pairs = [x for x in self._pairs if x[0] != key]
+    
+    def __delitem__(self, key):
+        len_before = len(self._pairs)
+        self.remove(key)
+        if len(self._pairs) == len_before:
+            raise KeyError(key)
 
     def __setitem__(self, key, value):
         key = self._conform_key(key)
         if isinstance(value, (tuple, list)):
             self.setlist(key, value)
         else:
-            del self[key]
+            self.remove(key)
             self._pairs.append((self._conform_key(key), self._conform_value(value)))
 
     def setlist(self, key, value):
