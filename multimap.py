@@ -274,7 +274,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
 
     def setlist(self, key, value):
         key = self._conform_key(key)
-        del self[key]
+        self.remove(key)
         for v in value:
             self._pairs.append((key, self._conform_value(v)))
 
@@ -295,13 +295,13 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
             if args:
                 return args[0]
             raise
-        del self[key]
+        self.remove(key)
         return ret
     
     def popall(self, key):
         key = self._conform_key(key)
         ret = self.getall(key)
-        del self[key]
+        self.remove(key)
         return ret
     
     def popone(self, key, *args):
@@ -326,7 +326,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
 
     def update(self, mapping):
         for k, v in mapping.items():
-            del self[k]
+            self.remove(k)
             self[k] = v
 
     def copy(self):
@@ -387,7 +387,8 @@ class DelayedMutableMultiMap(DelayedTraits, MutableMultiMap):
     """
     
     pass
-    
+
+
 def test_conform_methods():
     class CaseInsensitive(MutableMultiMap):
         def _conform_key(self, key):
