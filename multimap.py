@@ -415,20 +415,24 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
             for i, id in enumerate(ids):
                 ids[i] -= bisect(ids_to_remove, id)
     
-    def _update_for_new_ids(self, insert_ids):
-        """Update the _key_ids mapping for adding some new pairs.
-        
-        This must be called BEFORE the new items are added to _key_ids map.
+    def _insert_pairs(self, ids_and_pairs):
+        """Insert some new pairs, and keep the _key_ids updated.
         
         Params:
-            insert_ids -- Where the new items will be inserted.
+            ids_and_pairs -- A list of (index, (key, value)) tuples.
         
         """
+        ids_to_insert = [x[0] for x in ids_and_pairs]
+        
         # We use the bisect to tell us how many spots the given index is
         # shifting up in the list.
         for ids in self._key_ids.itervalues():
             for i, id in enumerate(ids):
-                ids[i] += bisect(insert_ids, id)
+                ids[i] += bisect(ids_to_insert, id)
+        
+        # Do the actual insertion
+        for i, pair in ids_and_pairs:
+            self._pairs.insert(i, pair)
     
     def discard(self, key):
         """Same as del m[key], but does not throw an error."""
@@ -438,12 +442,37 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
             pass
 
     def __setitem__(self, key, value):
+        """Set a key-value pair.
+        
+        If the key was not already in the mapping, it gets put at the end. If
+        it was already in with a single value, the value gets updated. If
+        there were multiple values, all but the first are removed.
+        
+        >>> m = MutableMultiMap(a=1)
+        >>> m['b'] = 2
+        >>> m
+        MutableMultiMap([('a', 1), ('b', 2)])
+        >>> m['c'] = 3
+        >>> m
+        MutableMultiMap([('a', 1), ('b', 2), ('c', 3)])
+        >>> m['b'] = 4
+        >>> m
+        MutableMultiMap([('a', 1), ('b', 4), ('c', 3)])
+        >>> m['b']
+        4
+        
+        """
         key = self._conform_key(key)
-        if isinstance(value, (tuple, list)):
-            self.setlist(key, value)
+        value = self._conform_value(value)
+        ids = self._key_ids.pop(key, None)
+        if ids:
+            if len(ids) > 1:
+                self._remove_pairs(ids[1:])
+            self._key_ids[key] = [ids[0]]
+            self._pairs[ids[0]] = (key, value)
         else:
-            self.remove(key)
-            self._pairs.append((key, self._conform_value(value)))
+            self._key_ids[key].append(len(self._pairs))
+            self._pairs.append((key, value))
 
     def setlist(self, key, value):
         key = self._conform_key(key)
