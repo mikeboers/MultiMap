@@ -25,7 +25,7 @@ the pair list (for making everything faster).
 
 
 import collections
-
+from bisect import bisect
 
 class MultiMap(collections.Mapping):
     """An ordered mapping which supports multiple values for the same key."""
@@ -353,15 +353,89 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     
     """
     
-    def remove(self, key):
-        key = self._conform_key(key)
-        self._pairs = [x for x in self._pairs if x[0] != key]
-    
     def __delitem__(self, key):
-        len_before = len(self._pairs)
-        self.remove(key)
-        if len(self._pairs) == len_before:
+        """Remove all key/value pairs by the given key.
+        
+        Raises a KeyError if there are none.
+        
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
+        >>> del m['a']
+        >>> m
+        MutableMultiMap([('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
+        >>> m['b']
+        2
+        >>> m.getall('c')
+        [4, 6]
+        
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
+        >>> del m['b']
+        >>> m
+        MutableMultiMap([('a', 1), ('c', 4), ('d', 5), ('c', 6)])
+        >>> m['a']
+        1
+        >>> m['c']
+        4
+        >>> m.getall('c')
+        [4, 6]
+        
+        >>> m = MutableMultiMap(a=1)
+        >>> del m['x']
+        Traceback (most recent call last):
+        ...
+        KeyError: 'x'
+        
+        """
+        key = self._conform_key(key)
+        del_ids = self._key_ids[key]
+        if not del_ids:
             raise KeyError(key)
+        
+        # Remove the ids.
+        del self._key_ids[key]
+        
+        self._remove_pairs(del_ids)
+    
+    def _remove_pairs(self, ids_to_remove):
+        """Remove the pairs identified by the given indices into _pairs.
+        
+        Removes the pair, and updates the _key_ids mapping to be accurate.
+        Removing the ids from the _key_ids is your own responsibility.
+        
+        Params:
+            ids_to_remove -- The indices to remove. MUST be sorted.
+        
+        """
+        # Remove them.
+        for i in reversed(ids_to_remove):
+            del self._pairs[i]
+        
+        # We use the bisect to tell us how many spots the given index is
+        # shifting up in the list.
+        for ids in self._key_ids.itervalues():
+            for i, id in enumerate(ids):
+                ids[i] -= bisect(ids_to_remove, id)
+    
+    def _update_for_new_ids(self, insert_ids):
+        """Update the _key_ids mapping for adding some new pairs.
+        
+        This must be called BEFORE the new items are added to _key_ids map.
+        
+        Params:
+            insert_ids -- Where the new items will be inserted.
+        
+        """
+        # We use the bisect to tell us how many spots the given index is
+        # shifting up in the list.
+        for ids in self._key_ids.itervalues():
+            for i, id in enumerate(ids):
+                ids[i] += bisect(insert_ids, id)
+    
+    def discard(self, key):
+        """Same as del m[key], but does not throw an error."""
+        try:
+            del self[key]
+        except KeyError:
+            pass
 
     def __setitem__(self, key, value):
         key = self._conform_key(key)
@@ -369,7 +443,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
             self.setlist(key, value)
         else:
             self.remove(key)
-            self._pairs.append((self._conform_key(key), self._conform_value(value)))
+            self._pairs.append((key, self._conform_value(value)))
 
     def setlist(self, key, value):
         key = self._conform_key(key)
@@ -419,9 +493,6 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     
     def popitem(self, *args):
         return self._pairs.pop(*args)
-
-    def insert(self, index, pair):
-        self._pairs.insert(index, self._conform_pair(pair))
 
     def update(self, mapping):
         for k, v in mapping.items():
