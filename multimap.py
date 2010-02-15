@@ -19,7 +19,13 @@ with no word seperators.
 
 Internally the mapping is represented as a list of (key, value) pairs (which
 is what maintains the order) AND a mapping of keys to a list of positions in
-the pair list (for making everything faster).
+the pair list (for making everything faster). Need to keep in mind that any
+given list in _key_ids may be empty.
+
+I have not implemented something corresponding to the following list methods:
+    - count
+    - index
+    - remove
 
 """
 
@@ -71,7 +77,7 @@ class MultiMap(collections.Mapping):
     def _conform_key(self, key):
         """Force a given key into certain form.
         
-        For overiding.
+        For overriding.
         
         """
         return key
@@ -79,7 +85,7 @@ class MultiMap(collections.Mapping):
     def _conform_value(self, value):
         """Force a given value into certain form.
 
-        For overiding.
+        For overriding.
 
         """
         return value
@@ -95,7 +101,11 @@ class MultiMap(collections.Mapping):
         if len(pair) != 2:
             raise ValueError('MultiMap element must have length 2')
         return (self._conform_key(pair[0]), self._conform_value(pair[1]))
-        
+    
+    @classmethod
+    def fromkeys(cls, keys, value=None):
+        return cls([(k, value) for k in keys])
+    
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._pairs)
     
@@ -108,10 +118,10 @@ class MultiMap(collections.Mapping):
         True
         
         """
-        return len(self._pairs)
+        return bool(self._pairs)
     
     def __getitem__(self, key):
-        """Get the FIRST value for this key.
+        """Get the FIRST value for the given key.
         
         >>> m = MultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
         >>> m['a']
@@ -131,7 +141,7 @@ class MultiMap(collections.Mapping):
             raise KeyError(key)
     
     def __contains__(self, key):
-        """Is a key in this mapping?
+        """Is the given key in this mapping?
         
         >>> m = MultiMap(a=1)
         >>> 'a' in m
@@ -140,7 +150,12 @@ class MultiMap(collections.Mapping):
         False
         
         """
-        return self._conform_key(key) in self._key_ids
+        # Need to explicitly check the value of the id list, as it may be in
+        # there already but be empty.
+        return bool(self._key_ids[self._conform_key(key)])
+    
+    def has_key(self, key):
+        return key in self
     
     def __len__(self):
         """The number of different keys.
@@ -162,6 +177,12 @@ class MultiMap(collections.Mapping):
         """
         return len(self._pairs)
     
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+        
     def getall(self, key):
         """A list of all the values stored under this key.
         
@@ -180,9 +201,9 @@ class MultiMap(collections.Mapping):
         return [self._pairs[i][1] for i in self._key_ids[key]]
     
     def iteritems(self):
-        """Iterator across all the unique keys and their values.
+        """Iterator across all the non-duplicate keys and their values.
         
-        Only yields the first key of duplicated.
+        Only yields the first key of duplicates.
         
         """
         keys_yielded = set()
@@ -352,7 +373,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     ('a', 0)
     
     """
-        
+    
     def _remove_pairs(self, ids_to_remove):
         """Remove the pairs identified by the given indices into _pairs.
         
@@ -455,16 +476,39 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         4
         
         """
+        self.setmany(key, [value])
+    
+    def clear(self):
+        self._pairs = []
+        self._rebuild_key_ids()
         
+    def setmany(self, key, values):
+        """Set more than one value for a given key.
+        
+        Replaces all the existing values for the given key with new values,
+        removes extra values that are already set if we don't suply enough,
+        and appends values to the end if there are not enough existing spots.
+        
+        >>> m = MutableMultiMap(a=1, b=2, c=3)
+        >>> m.sort()
+        >>> m.keys()
+        ['a', 'b', 'c']
+        >>> m.append(('b', 4))
+        >>> m.setmany('b', [5, 6, 7])
+        >>> m.allitems()
+        [('a', 1), ('b', 5), ('c', 3), ('b', 6), ('b', 7)]
+        
+        """
         key = self._conform_key(key)
-        value = self._conform_value(value)
-        ids = self._key_ids.pop(key, None)
+        values = [self._conform_value(x) for x in values]
+        ids = self._key_ids[key][:]
+        while ids and values:
+            id    = ids.pop(0)
+            value = values.pop(0)
+            self._pairs[id] = (key, value)
         if ids:
-            if len(ids) > 1:
-                self._remove_pairs(ids[1:])
-            self._key_ids[key] = [ids[0]]
-            self._pairs[ids[0]] = (key, value)
-        else:
+            self._remove_pairs(ids)
+        for value in values:
             self._key_ids[key].append(len(self._pairs))
             self._pairs.append((key, value))
     
@@ -474,12 +518,6 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
             del self[key]
         except KeyError:
             pass
-                    
-    # def setlist(self, key, value):
-    #     key = self._conform_key(key)
-    #     self.remove(key)
-    #     for v in value:
-    #         self._pairs.append((key, self._conform_value(v)))
 
     def sort(self, *args, **kwargs):
         """Sort the MultiMap.
@@ -502,6 +540,10 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         self._pairs.sort(*args, **kwargs)
         self._rebuild_key_ids()
     
+    def reverse(self):
+        self._pairs.reverse()
+        self._rebuild_key_ids()
+    
     def insert(self, index, pair):
         self._insert_pairs([(index, self._conform_pair(pair))])
         
@@ -514,46 +556,103 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         for pair in pairs:
             self.append(pair)
     
-    # def pop(self, key, *args):
-    #     key = self._conform_key(key)
-    #     try:
-    #         ret = self[key]
-    #     except KeyError:
-    #         if args:
-    #             return args[0]
-    #         raise
-    #     self.remove(key)
-    #     return ret
-    # 
-    # def popall(self, key):
-    #     key = self._conform_key(key)
-    #     ret = self.getall(key)
-    #     self.remove(key)
-    #     return ret
-    # 
-    # def popone(self, key, *args):
-    #     key = self._conform_key(key)
-    #     try:
-    #         ret = self[key]
-    #     except KeyError:
-    #         if args:
-    #             return args[0]
-    #         raise
-    #     for i in range(len(self._pairs)):
-    #         if self._pairs[i][0] == key:
-    #             self._pairs.pop(i)
-    #             break
-    #     return ret
-    # 
-    # def popitem(self, *args):
-    #     return self._pairs.pop(*args)
+    def pop(self, key, *default):
+        """Remove specified key and return the corresponding value.
+        
+        If key is not found, default is returned if given.
+        
+        Removes ALL values for this key, but only returns the first.
+        
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4)])
+        >>> m.pop('a')
+        1
+        >>> m.pop('b')
+        2
+        >>> m.items()
+        [('c', 4)]
+        >>> m.pop('x')
+        Traceback (most recent call last):
+        ...
+        KeyError: 'x'
+        >>> m.pop('x', 'default')
+        'default'
+        
+        """
+        try:
+            value = self[key]
+        except KeyError:
+            if default:
+                return default[0]
+            raise
+        del self[key]
+        return value
+    
+    def popone(self, key, *default):
+        """Remove first of given key and return corresponding value.
+        
+        If key is not found, default is returned if given.
+        
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4)])
+        >>> m.popone('b')
+        2
+        >>> m.items()
+        [('a', 1), ('b', 3), ('c', 4)]
+        >>> m.popone('b')
+        3
+        >>> m.popone('b')
+        Traceback (most recent call last):
+        ...
+        KeyError: 'b'
+        >>> m.popone('b', 'default')
+        'default'
+        
+        """
+        try:
+            value = self[key]
+        except KeyError:
+            if default:
+                return default[0]
+            raise
+        
+        # Delete this one.
+        self._remove_pairs([self._key_ids[self._conform_key(key)].pop(0)])
+        
+        return value
+
+    def popall(self, key):
+        """Remove specified key and return all corresponding values.
+        
+        If they key is not found, an empty list is return.
+        
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4)])
+        >>> m.popall('a')
+        [1]
+        >>> m.popall('b')
+        [2, 3]
+        >>> m.popall('x')
+        []
+        
+        """
+        values = self.getall(key)
+        try:
+            del self[key]
+        except KeyError:
+            pass
+        return values
+
+    def popitem(self, index=-1):
+        """Remove and return an item at index (default last)."""
+        return self._pairs.pop(index)
+
+
 
     def update(self, mapping):
-        for k, v in mapping.items():
-            self[k] = v
+        for k in mapping:
+            self[k] = mapping[k]
     
     def copy(self):
         return self.__class__(self._pairs[:])
+
 
 
 class DelayedTraits(object):
@@ -561,30 +660,41 @@ class DelayedTraits(object):
         self.supplier = supplier
         self._setup = False
         self.__pairs = None
-
+        self.__key_ids = None
+            
     @property
     def _pairs(self):
-        if not self._setup:
+        if self.__pairs is None:
             self.__pairs = [(self._conform_key(k), self._conform_value(v)) for
                 k, v in self.supplier()]
-            self._setup = True
         return self.__pairs
     
     @_pairs.setter
     def _pairs(self, value):
         self.__pairs = value
+    
+    @property
+    def _key_ids(self):
+        if self.__key_ids is None:
+            self._rebuild_key_ids()
+        return self.__key_ids
+    
+    @_key_ids.setter
+    def _key_ids(self, value):
+        self.__key_ids = value
+
 
 class DelayedMultiMap(DelayedTraits, MultiMap):
     """
-    >> def gen():
+    >>> def gen():
     ...     print 'generating'
     ...     for x in range(5):
     ...         yield (x, 'x')
-    >> m = DelayedMultiMap(gen)
-    >> m[0]
+    >>> m = DelayedMultiMap(gen)
+    >>> m[0]
     generating
     'x'
-    >> m[5] = 'new'
+    >>> m[5] = 'new'
     Traceback (most recent call last):
     ...
     TypeError: 'DelayedMultiMap' object does not support item assignment
@@ -595,16 +705,16 @@ class DelayedMultiMap(DelayedTraits, MultiMap):
 
 class DelayedMutableMultiMap(DelayedTraits, MutableMultiMap):
     """
-    >> def gen():
+    >>> def gen():
     ...     print 'generating'
     ...     for x in range(5):
     ...         yield (x, 'x')
-    >> m = DelayedMutableMultiMap(gen)
-    >> m[0]
+    >>> m = DelayedMutableMultiMap(gen)
+    >>> m[0]
     generating
     'x'
-    >> m[5] = 'new'
-    >> m
+    >>> m[5] = 'new'
+    >>> m
     DelayedMutableMultiMap([(0, 'x'), (1, 'x'), (2, 'x'), (3, 'x'), (4, 'x'), (5, 'new')])
     
     """
@@ -612,18 +722,19 @@ class DelayedMutableMultiMap(DelayedTraits, MutableMultiMap):
     pass
 
 
-# def test_conform_methods():
-#     class CaseInsensitive(MutableMultiMap):
-#         def _conform_key(self, key):
-#             return key.lower()
-#     d = CaseInsensitive()
-#     d['a'] = 1
-#     d['A'] = 2
-#     assert len(d) == 1
-#     assert d['a'] == 2
-#     d['Content-Encoding'] = 'deflate'
-#     assert 'content-encoding' in d
-#     assert 'blah' not in d
+def test_conform_methods():
+    class CaseInsensitive(MutableMultiMap):
+        def _conform_key(self, key):
+            return key.lower()
+    d = CaseInsensitive()
+    d['a'] = 1
+    d['A'] = 2
+    assert len(d) == 1
+    assert d['a'] == 2
+    d['Content-Encoding'] = 'deflate'
+    assert 'content-encoding' in d
+    assert 'blah' not in d
+
 
 if __name__ == '__main__':
     import nose; nose.run(defaultTest=__name__)
