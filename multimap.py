@@ -475,14 +475,19 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         >>> m['b']
         4
         
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('c', 3), ('b', 4)])
+        >>> m['b'] = 'new'
+        >>> m.allitems()
+        [('a', 1), ('b', 'new'), ('c', 3)]
+        
         """
-        self.setmany(key, [value])
+        self.setall(key, [value])
     
     def clear(self):
         self._pairs = []
         self._rebuild_key_ids()
         
-    def setmany(self, key, values):
+    def setall(self, key, values):
         """Set more than one value for a given key.
         
         Replaces all the existing values for the given key with new values,
@@ -494,7 +499,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         >>> m.keys()
         ['a', 'b', 'c']
         >>> m.append(('b', 4))
-        >>> m.setmany('b', [5, 6, 7])
+        >>> m.setall('b', [5, 6, 7])
         >>> m.allitems()
         [('a', 1), ('b', 5), ('c', 3), ('b', 6), ('b', 7)]
         
@@ -507,6 +512,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
             value = values.pop(0)
             self._pairs[id] = (key, value)
         if ids:
+            self._key_ids[key] = self._key_ids[key][:-len(ids)]
             self._remove_pairs(ids)
         for value in values:
             self._key_ids[key].append(len(self._pairs))
