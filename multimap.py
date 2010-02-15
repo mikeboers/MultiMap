@@ -352,49 +352,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     ('a', 0)
     
     """
-    
-    def __delitem__(self, key):
-        """Remove all key/value pairs by the given key.
         
-        Raises a KeyError if there are none.
-        
-        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
-        >>> del m['a']
-        >>> m
-        MutableMultiMap([('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
-        >>> m['b']
-        2
-        >>> m.getall('c')
-        [4, 6]
-        
-        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
-        >>> del m['b']
-        >>> m
-        MutableMultiMap([('a', 1), ('c', 4), ('d', 5), ('c', 6)])
-        >>> m['a']
-        1
-        >>> m['c']
-        4
-        >>> m.getall('c')
-        [4, 6]
-        
-        >>> m = MutableMultiMap(a=1)
-        >>> del m['x']
-        Traceback (most recent call last):
-        ...
-        KeyError: 'x'
-        
-        """
-        key = self._conform_key(key)
-        del_ids = self._key_ids[key]
-        if not del_ids:
-            raise KeyError(key)
-        
-        # Remove the ids.
-        del self._key_ids[key]
-        
-        self._remove_pairs(del_ids)
-    
     def _remove_pairs(self, ids_to_remove):
         """Remove the pairs identified by the given indices into _pairs.
         
@@ -434,13 +392,48 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         for i, pair in ids_and_pairs:
             self._pairs.insert(i, pair)
     
-    def discard(self, key):
-        """Same as del m[key], but does not throw an error."""
-        try:
-            del self[key]
-        except KeyError:
-            pass
+    def __delitem__(self, key):
+        """Remove all key/value pairs by the given key.
 
+        Raises a KeyError if there are none.
+
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
+        >>> del m['a']
+        >>> m
+        MutableMultiMap([('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
+        >>> m['b']
+        2
+        >>> m.getall('c')
+        [4, 6]
+
+        >>> m = MutableMultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
+        >>> del m['b']
+        >>> m
+        MutableMultiMap([('a', 1), ('c', 4), ('d', 5), ('c', 6)])
+        >>> m['a']
+        1
+        >>> m['c']
+        4
+        >>> m.getall('c')
+        [4, 6]
+
+        >>> m = MutableMultiMap(a=1)
+        >>> del m['x']
+        Traceback (most recent call last):
+        ...
+        KeyError: 'x'
+
+        """
+        key = self._conform_key(key)
+        del_ids = self._key_ids[key]
+        if not del_ids:
+            raise KeyError(key)
+
+        # Remove the ids.
+        del self._key_ids[key]
+
+        self._remove_pairs(del_ids)
+        
     def __setitem__(self, key, value):
         """Set a key-value pair.
         
@@ -462,6 +455,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         4
         
         """
+        
         key = self._conform_key(key)
         value = self._conform_value(value)
         ids = self._key_ids.pop(key, None)
@@ -473,61 +467,91 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
         else:
             self._key_ids[key].append(len(self._pairs))
             self._pairs.append((key, value))
-
-    def setlist(self, key, value):
-        key = self._conform_key(key)
-        self.remove(key)
-        for v in value:
-            self._pairs.append((key, self._conform_value(v)))
+    
+    def discard(self, key):
+        """Same as del m[key], but does not throw an error."""
+        try:
+            del self[key]
+        except KeyError:
+            pass
+                    
+    # def setlist(self, key, value):
+    #     key = self._conform_key(key)
+    #     self.remove(key)
+    #     for v in value:
+    #         self._pairs.append((key, self._conform_value(v)))
 
     def sort(self, *args, **kwargs):
+        """Sort the MultiMap.
+        
+        Takes the same arguments as list.sort, and operates on tuples of
+        (key, value) pairs.
+        
+        >>> m = MutableMultiMap()
+        >>> m['c'] = 1
+        >>> m['b'] = 3
+        >>> m['a'] = 2
+        >>> m.sort()
+        >>> m.keys()
+        ['a', 'b', 'c']
+        >>> m.sort(key=lambda x: x[1])
+        >>> m.keys()
+        ['c', 'a', 'b']
+        
+        """
         self._pairs.sort(*args, **kwargs)
-
+        self._rebuild_key_ids()
+    
+    def insert(self, index, pair):
+        self._insert_pairs([(index, self._conform_pair(pair))])
+        
     def append(self, pair):
-        self._pairs.append(self._conform_pair(pair))
-
+        key, value = pair = self._conform_pair(pair)
+        self._key_ids[key].append(len(self._pairs))
+        self._pairs.append(pair)
+    
     def extend(self, pairs):
-        self._pairs.extend(self._conform_pair(x) for x in pairs)
-
-    def pop(self, key, *args):
-        key = self._conform_key(key)
-        try:
-            ret = self[key]
-        except KeyError:
-            if args:
-                return args[0]
-            raise
-        self.remove(key)
-        return ret
+        for pair in pairs:
+            self.append(pair)
     
-    def popall(self, key):
-        key = self._conform_key(key)
-        ret = self.getall(key)
-        self.remove(key)
-        return ret
-    
-    def popone(self, key, *args):
-        key = self._conform_key(key)
-        try:
-            ret = self[key]
-        except KeyError:
-            if args:
-                return args[0]
-            raise
-        for i in range(len(self._pairs)):
-            if self._pairs[i][0] == key:
-                self._pairs.pop(i)
-                break
-        return ret
-    
-    def popitem(self, *args):
-        return self._pairs.pop(*args)
+    # def pop(self, key, *args):
+    #     key = self._conform_key(key)
+    #     try:
+    #         ret = self[key]
+    #     except KeyError:
+    #         if args:
+    #             return args[0]
+    #         raise
+    #     self.remove(key)
+    #     return ret
+    # 
+    # def popall(self, key):
+    #     key = self._conform_key(key)
+    #     ret = self.getall(key)
+    #     self.remove(key)
+    #     return ret
+    # 
+    # def popone(self, key, *args):
+    #     key = self._conform_key(key)
+    #     try:
+    #         ret = self[key]
+    #     except KeyError:
+    #         if args:
+    #             return args[0]
+    #         raise
+    #     for i in range(len(self._pairs)):
+    #         if self._pairs[i][0] == key:
+    #             self._pairs.pop(i)
+    #             break
+    #     return ret
+    # 
+    # def popitem(self, *args):
+    #     return self._pairs.pop(*args)
 
     def update(self, mapping):
         for k, v in mapping.items():
-            self.remove(k)
             self[k] = v
-
+    
     def copy(self):
         return self.__class__(self._pairs[:])
 
