@@ -272,7 +272,7 @@ class MultiMap(collections.Mapping):
     def iterallvalues(self):
         """Iterate across ALL of the values in the mapping."""
         for x in self._pairs:
-            return x[1]
+            yield x[1]
     
     def allvalues(self):
         """A list of ALL values in the mapping.
