@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name='MultiMap',
-    version='1.0b',
+    version='1.0.1b',
     description='Mapping class which allows multiple values per key and preserves order.',
     url='http://github.com/mikeboers/multimap',
     py_modules=['multimap'],
