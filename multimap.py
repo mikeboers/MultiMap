@@ -183,22 +183,25 @@ class MultiMap(collections.Mapping):
         except KeyError:
             return default
         
-    def getall(self, key):
+    def list(self, key):
         """A list of all the values stored under this key.
         
         Returns an empty list if there are no values under this key.
         
         >>> m = MultiMap([('a', 1), ('b', 2), ('b', 3), ('c', 4), ('d', 5), ('c', 6)])
-        >>> m.getall('a')
+        >>> m.list('a')
         [1]
-        >>> m.getall('b')
+        >>> m.list('b')
         [2, 3]
-        >>> m.getall('x')
+        >>> m.list('x')
         []
         
         """
         key = self._conform_key(key)
         return [self._pairs[i][1] for i in self._key_ids[key]]
+    
+    # These are for compatibility with other multi-value mapping libraries.
+    getlist = getall = list
     
     def iteritems(self):
         """Iterator across all the non-duplicate keys and their values.
