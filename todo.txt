@@ -1,0 +1,3 @@
+
+- Add a lists() and iterlists() method. Should these be returning the keys that
+  go along with them? That seems more of a itemlists sort of thing.
