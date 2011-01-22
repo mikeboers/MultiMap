@@ -319,7 +319,7 @@ class MutableMultiMap(MultiMap, collections.MutableMapping):
     >> m['c']
     3
 
-    >> m.setlist('c', [1, 2, 3])
+    >> m.setall('c', [1, 2, 3])
     >> m['c']
     1
     >> m.getall('c')
