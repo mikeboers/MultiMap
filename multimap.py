@@ -299,80 +299,79 @@ class MultiMap(collections.Mapping):
 class MutableMultiMap(MultiMap, collections.MutableMapping):
     """An ordered mapping which supports multiple values for the same key.
 
-    >> m = MutableMultiMap({'a': 1, 'b': 2})
-    >> m
+    >>> m = MutableMultiMap({'a': 1, 'b': 2})
+    >>> m
     MutableMultiMap([('a', 1), ('b', 2)])
 
-    >> m = MutableMultiMap([('a', 1), ('b', 2)])
-    >> m
+    >>> m = MutableMultiMap([('a', 1), ('b', 2)])
+    >>> m
     MutableMultiMap([('a', 1), ('b', 2)])
 
-    >> m = MutableMultiMap(a=1, b=2)
-    >> m
+    >>> m = MutableMultiMap(a=1, b=2)
+    >>> m
     MutableMultiMap([('a', 1), ('b', 2)])
-
-
-    >> m['a']
+    
+    >>> m['a']
     1
 
-    >> m['c'] = 3
-    >> m['c']
+    >>> m['c'] = 3
+    >>> m['c']
     3
 
-    >> m.setall('c', [1, 2, 3])
-    >> m['c']
+    >>> m.setall('c', [1, 2, 3])
+    >>> m['c']
     1
-    >> m.getall('c')
+    >>> m.getall('c')
     [1, 2, 3]
 
-    >> m.keys()
+    >>> m.keys()
     ['a', 'b', 'c']
-    >> m.allkeys()
+    >>> m.allkeys()
     ['a', 'b', 'c', 'c', 'c']
-    >> m.allvalues()
+    >>> m.allvalues()
     [1, 2, 1, 2, 3]
-    >> len(m)
+    >>> len(m)
     3
-    >> m.alllen()
+    >>> m.alllen()
     5
 
-    >> m['c'] = 4
-    >> m.getall('c')
+    >>> m['c'] = 4
+    >>> m.getall('c')
     [4]
 
-    >> m.append((1, 2))
-    >> m.allitems()
+    >>> m.append((1, 2))
+    >>> m.allitems()
     [('a', 1), ('b', 2), ('c', 4), (1, 2)]
 
-    >> m.popitem()
+    >>> m.popitem()
     (1, 2)
 
-    >> m.popitem(0)
+    >>> m.popitem(0)
     ('a', 1)
     
-    >> M = MutableMultiMap([('a', 0), ('b', 1), ('c', 2), ('b', 3), ('c', 4), ('c', 5)])
+    >>> M = MutableMultiMap([('a', 0), ('b', 1), ('c', 2), ('b', 3), ('c', 4), ('c', 5)])
     
-    >> m = M.copy()
-    >> m.pop('b')
+    >>> m = M.copy()
+    >>> m.pop('b')
     1
-    >> m
+    >>> m
     MutableMultiMap([('a', 0), ('c', 2), ('c', 4), ('c', 5)])
     
-    >> m = M.copy()
-    >> m.popone('b')
+    >>> m = M.copy()
+    >>> m.popone('b')
     1
-    >> m
+    >>> m
     MutableMultiMap([('a', 0), ('c', 2), ('b', 3), ('c', 4), ('c', 5)])
     
-    >> m.popall('c')
+    >>> m.popall('c')
     [2, 4, 5]
-    >> m
+    >>> m
     MutableMultiMap([('a', 0), ('b', 3)])
     
-    >> m = M.copy()
-    >> m.popitem()
+    >>> m = M.copy()
+    >>> m.popitem()
     ('c', 5)
-    >> m.popitem(0)
+    >>> m.popitem(0)
     ('a', 0)
     
     """
@@ -747,3 +746,4 @@ def test_conform_methods():
 
 if __name__ == '__main__':
     import nose; nose.run(defaultTest=__name__)
+    import doctest; doctest.testmod()
